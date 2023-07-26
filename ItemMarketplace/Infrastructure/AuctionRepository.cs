@@ -1,7 +1,9 @@
 ﻿using Domain.Entities;
 using Domain.Interfaces;
 using Domain.Models;
+using Domain.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Infrastructure
 {
@@ -9,15 +11,16 @@ namespace Infrastructure
     {
         private bool disposed = false;
         private readonly MarketplaceContext _context;
+        private readonly IMemoryCache _cache;
 
-        public AuctionRepository(MarketplaceContext context)
+        public AuctionRepository(MarketplaceContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
 
-
-        public Task<Auction?> GetAsync(int id) => _context.Auction.FirstOrDefaultAsync(x => x.Id == id);
+        public Task<Auction?> GetAsync(int id) => _cache.GetOrCreateAsync(CacheHelper.IdBuilder<Auction>(id), (e) => _context.Auction.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id));
 
         public IEnumerable<Auction> Get(int limit = 100)
         {
@@ -26,10 +29,16 @@ namespace Infrastructure
 
         public async Task<IEnumerable<Auction>> GetAsync(string name, MarketStatus status, SortOrder sortOrder, AuctionSortKey sortKey, int limit)
         {
-            Item? item = await _context.Item.FirstOrDefaultAsync(x => x.Name == name);
+            Item? item = await _context.Item.AsNoTracking().FirstOrDefaultAsync(x => x.Name == name);
             if (item == null)
             {
                 return Enumerable.Empty<Auction>();
+            }
+
+            IList<Auction>? response = _cache.Get<List<Auction>>(CacheHelper.IdBuilder<Auction>(name, status, sortOrder, sortKey, limit));
+            if (response != null)
+            {
+                return response;
             }
 
             IQueryable<Auction> query = _context.Auction;
@@ -40,7 +49,13 @@ namespace Infrastructure
 
             query = ApplySorting(query, sortOrder, sortKey);
 
-            return query;
+            response = await _cache.GetOrCreateAsync(CacheHelper.IdBuilder<Auction>(name, status, sortOrder, sortKey, limit ), (e) => query.ToListAsync());
+            if (response == null)
+            {
+                return query;
+            }
+
+            return response;
         }
 
         private static IQueryable<Auction> ApplySorting(IQueryable<Auction> query, SortOrder sortOrder, AuctionSortKey sortKey) => sortOrder switch

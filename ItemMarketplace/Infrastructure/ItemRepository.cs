@@ -1,6 +1,8 @@
 ﻿using Domain.Entities;
+using Domain.Helpers;
 using Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Infrastructure
 {
@@ -8,13 +10,15 @@ namespace Infrastructure
     {
         private bool disposed = false;
         private readonly MarketplaceContext _context;
+        private readonly IMemoryCache _cache;
 
-        public ItemRepository(MarketplaceContext context)
+        public ItemRepository(MarketplaceContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
-        public Task<Item?> GetItemAsync(int id) => _context.Item.FirstOrDefaultAsync(x => x.Id == id);
+        public Task<Item?> GetItemAsync(int id) => _cache.GetOrCreateAsync(CacheHelper.IdBuilder<Item>(id), (e) => _context.Item.FirstOrDefaultAsync(x => x.Id == id));
 
 
 
