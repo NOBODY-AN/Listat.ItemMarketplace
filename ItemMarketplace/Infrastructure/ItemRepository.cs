@@ -57,11 +57,11 @@ namespace Infrastructure
             query = query.AsNoTracking();
             if (!string.IsNullOrEmpty(name))
             {
-                query = BuildSearchQuery(query, (q, s) => q.Where(x => s.Any(a => x.Name.Contains(a))), name);
+                query = BuildSearchQuery(query, (q, s) => q.Where(x => x.Name.Contains(s)), name);
             }
             if (!string.IsNullOrEmpty(description))
             {
-                query = BuildSearchQuery(query, (q, s) => q.Where(x => s.Any(a => x.Name.Contains(a))), description);
+                query = BuildSearchQuery(query, (q, s) => q.Where(x => x.Description.Contains(s)), description);
             }
 
             return await query.ToListAsync();

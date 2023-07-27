@@ -1,7 +1,6 @@
 using Domain.Interfaces;
 using Infrastructure;
 using ItemMarketplace.Filters;
-using Microsoft.AspNetCore.Mvc.Filters;
 using Serilog;
 using Serilog.Events;
 
@@ -11,7 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddNewtonsoftJson();
 builder.Services.AddMemoryCache();
 builder.Services.AddLogging((config) =>
 {

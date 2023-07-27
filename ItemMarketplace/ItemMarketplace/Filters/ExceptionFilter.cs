@@ -1,20 +1,17 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace ItemMarketplace.Filters
 {
-    public class ExceptionFilter : IAsyncExceptionFilter
+    public class ExceptionFilter : IExceptionFilter
     {
         private readonly ILogger _logger;
         public ExceptionFilter(ILogger<ExceptionFilter> logger)
         {
-
             _logger = logger;
-
         }
 
-        public async Task OnExceptionAsync(ExceptionContext context)
+        public void OnException(ExceptionContext context)
         {
             context.HttpContext.Response.StatusCode = 500;
             context.Result = new JsonResult("SYSTEM_EXCEPTION");
