@@ -35,12 +35,6 @@ namespace Infrastructure
                 return Enumerable.Empty<Auction>();
             }
 
-            IList<Auction>? response = _cache.Get<List<Auction>>(CacheHelper.IdBuilder<Auction>(name, status, sortOrder, sortKey, limit));
-            if (response != null)
-            {
-                return response;
-            }
-
             IQueryable<Auction> query = _context.Auction;
             query = query.AsNoTracking();
 
@@ -49,13 +43,7 @@ namespace Infrastructure
 
             query = ApplySorting(query, sortOrder, sortKey);
 
-            response = await _cache.GetOrCreateAsync(CacheHelper.IdBuilder<Auction>(name, status, sortOrder, sortKey, limit ), (e) => query.ToListAsync());
-            if (response == null)
-            {
-                return query;
-            }
-
-            return response;
+            return query;
         }
 
         private static IQueryable<Auction> ApplySorting(IQueryable<Auction> query, SortOrder sortOrder, AuctionSortKey sortKey) => sortOrder switch
