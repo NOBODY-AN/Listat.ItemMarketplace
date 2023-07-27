@@ -17,6 +17,9 @@ builder.Services.AddLogging((config) =>
 {
     Serilog.Core.Logger log = new LoggerConfiguration()
         .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+#if DEBUG
+        .MinimumLevel.Debug()
+#endif
         .WriteTo.Console()
     .CreateLogger();
 

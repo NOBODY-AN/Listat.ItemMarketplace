@@ -1,11 +1,9 @@
 ﻿using Newtonsoft.Json;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Domain.Entities
 {
     public class Item
     {
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
@@ -17,6 +15,14 @@ namespace Domain.Entities
         public Item(int id, string name, string description, string metadata)
         {
             Id = id;
+            Name = name;
+            Description = description;
+            Metadata = metadata;
+        }
+
+        public Item(string name, string description, string metadata)
+        {
+            Id = 0;
             Name = name;
             Description = description;
             Metadata = metadata;

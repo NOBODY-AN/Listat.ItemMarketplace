@@ -23,9 +23,9 @@ namespace ItemMarketplace.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAsync(string name, MarketStatus status, [FromQuery(Name = "sort_order")] SortOrder sortOrder, [FromQuery(Name = "sort_key")] AuctionSortKey sortKey, int limit)
+        public async Task<IActionResult> GetAsync(string name, MarketStatus status, [FromQuery(Name = "sort_order")] SortOrder sortOrder, [FromQuery(Name = "sort_key")] AuctionSortKey sortKey, int limit, int page)
         {
-            IEnumerable<Auction> result = await _auctionRepository.GetAsync(name, status, sortOrder, sortKey, limit);
+            IEnumerable<Auction> result = await _auctionRepository.GetAsync(name, status, sortOrder, sortKey, limit, page);
             return Ok(result);
         }
     }

@@ -27,7 +27,7 @@ namespace Infrastructure
             return _context.Auction.AsNoTracking().Take(limit);
         }
 
-        public async Task<IEnumerable<Auction>> GetAsync(string name, MarketStatus status, SortOrder sortOrder, AuctionSortKey sortKey, int limit)
+        public async Task<IEnumerable<Auction>> GetAsync(string name, MarketStatus status, SortOrder sortOrder, AuctionSortKey sortKey, int limit, int page)
         {
             Item? item = await _context.Item.AsNoTracking().FirstOrDefaultAsync(x => x.Name == name);
             if (item == null)
@@ -39,7 +39,7 @@ namespace Infrastructure
             query = query.AsNoTracking();
 
             query = query.Where(x => x.ItemId == item.Id && x.Status == status);
-            query = query.Take(limit);
+            query = query.Skip((page - 1) * limit).Take(limit);
 
             query = ApplySorting(query, sortOrder, sortKey);
 

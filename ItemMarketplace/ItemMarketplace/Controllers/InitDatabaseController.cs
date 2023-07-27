@@ -28,7 +28,7 @@ namespace ItemMarketplace.Controllers
             Random random = new();
 
 
-            for (int i = 0, j = 0; i < 100; i++)
+            for (int i = 1, j = 0; i < 101; i++)
             {
                 await _marketplaceContext.Item.AddAsync(BuildItem(i));
 
@@ -54,7 +54,7 @@ namespace ItemMarketplace.Controllers
             StringBuilder sb = new();
 
             return new Item(
-                id: id,
+                id: 0,
                 name: sb.Append("Some item").Append(' ').Append(id).ToString(),
                 description: sb.Append(' ').Append("small description for it").ToString(),
                 metadata: Guid.NewGuid().ToString("n"));
