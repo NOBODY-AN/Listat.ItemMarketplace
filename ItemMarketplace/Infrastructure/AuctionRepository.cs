@@ -27,23 +27,26 @@ namespace Infrastructure
             return _context.Auction.AsNoTracking().Take(limit);
         }
 
-        public async Task<IEnumerable<Auction>> GetAsync(string name, MarketStatus status, SortOrder sortOrder, AuctionSortKey sortKey, int limit, int page)
+        public async Task<(IEnumerable<Auction>, int totalPages)> GetAsync(string name, MarketStatus status, SortOrder sortOrder, AuctionSortKey sortKey, int limit, int page)
         {
             Item? item = await _context.Item.AsNoTracking().FirstOrDefaultAsync(x => x.Name == name);
             if (item == null)
             {
-                return Enumerable.Empty<Auction>();
+                return (Enumerable.Empty<Auction>(), 0);
             }
 
             IQueryable<Auction> query = _context.Auction;
-            query = query.AsNoTracking();
+            query = query.AsNoTracking()
+                .Where(x => x.ItemId == item.Id && x.Status == status);
 
-            query = query.Where(x => x.ItemId == item.Id && x.Status == status);
-            query = query.Skip((page - 1) * limit).Take(limit);
+            int countElements = await ApplySorting(query, sortOrder, sortKey).CountAsync();
+            int totalPages = PageHelper.CalculateTotalPagesCount(countElements, limit);
 
-            query = ApplySorting(query, sortOrder, sortKey);
+            query = ApplySorting(query, sortOrder, sortKey)
+                .Skip((page > totalPages ? totalPages - 1 : page - 1) * limit)
+                .Take(limit);
 
-            return query;
+            return (await query.ToListAsync(), totalPages);
         }
 
         private static IQueryable<Auction> ApplySorting(IQueryable<Auction> query, SortOrder sortOrder, AuctionSortKey sortKey) => sortOrder switch

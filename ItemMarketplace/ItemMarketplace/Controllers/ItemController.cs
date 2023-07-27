@@ -32,33 +32,33 @@ namespace ItemMarketplace.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> SearchAsync(string? name = null, string? description = null)
+        public async Task<IActionResult> SearchAsync(string? name = null, string? description = null, int pageNumber = 1)
         {
             if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description))
             {
                 return Ok(new ErrorResponse(Errors.ITEM_ERROR));
             }
 
-            IEnumerable<Item> response = await _itemRepository.SearchAsync(name, description);
+            (IEnumerable<Item> result, int totalPages) = await _itemRepository.SearchAsync(name, description, pageNumber);
 
-            return Ok(new ErrorResponse<IEnumerable<Item>>(response));
+            return Ok(new PageResponse<IEnumerable<Item>>(pageNumber > totalPages ? totalPages : pageNumber, totalPages, result));
         }
 
         [HttpGet("~/api/v2/item/search")]
-        public async Task<IActionResult> SearchAsync(string searchValue, int page)
+        public async Task<IActionResult> SearchAsync(string searchValue, int pageNumber = 1)
         {
             if (string.IsNullOrEmpty(searchValue))
             {
                 return Ok(new ErrorResponse(Errors.ITEM_ERROR));
             }
-            if (page < 1)
+            if (pageNumber < 1)
             {
                 return Ok(new ErrorResponse(Errors.ITEM_ERROR));
             }
 
-            IEnumerable<Item> response = await _itemRepository.SearchAsync(searchValue, page);
+            (IEnumerable<Item> response, int totalPages) = await _itemRepository.SearchAsync(searchValue, pageNumber);
 
-            return Ok(new ErrorResponse<IEnumerable<Item>>(response));
+            return Ok(new PageResponse<IEnumerable<Item>>(pageNumber > totalPages ? totalPages : pageNumber, totalPages, response));
         }
 
 

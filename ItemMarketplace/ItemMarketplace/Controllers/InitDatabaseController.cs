@@ -2,7 +2,6 @@
 using Domain.Models;
 using Infrastructure;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Text;
 
 namespace ItemMarketplace.Controllers
@@ -42,7 +41,7 @@ namespace ItemMarketplace.Controllers
                         itemId: i,
                         seconds: random.Next(1658629448/*Sun Jul 24 2022 02:24:08 GMT+0000*/, 1690165448/*Mon Jul 24 2023 02:24:08 GMT+0000*/),
                         price: random.Next(1, 777),
-                        status: random.Next(0, 3));
+                        status: random.Next(0, 4));
                 }
 
                 _marketplaceContext.Auction.BulkInsert(auctions);
