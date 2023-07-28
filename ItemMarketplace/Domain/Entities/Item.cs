@@ -27,5 +27,12 @@ namespace Domain.Entities
             Description = description;
             Metadata = metadata;
         }
+        public Item(int id)
+        {
+            Id = id;
+            Name = string.Empty;
+            Description = string.Empty;
+            Metadata = string.Empty;
+        }
     }
 }

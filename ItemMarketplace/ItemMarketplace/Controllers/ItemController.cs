@@ -2,12 +2,13 @@
 using Domain.Interfaces;
 using Domain.Models;
 using Domain.Models.Controllers;
+using Domain.Models.Items.GetItems;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 
 namespace ItemMarketplace.Controllers
 {
-    [Route("api/v1/item")]
+    [ApiVersion("1")]
+    [Route("api/v{version:apiVersion}/item")]
     [ApiController]
     public class ItemController : ControllerBase
     {
@@ -39,13 +40,14 @@ namespace ItemMarketplace.Controllers
                 return Ok(new ErrorResponse(Errors.ITEM_ERROR));
             }
 
-            (IEnumerable<Item> result, int totalPages) = await _itemRepository.SearchAsync(name, description, pageNumber);
+            PageResponse response = await _itemRepository.SearchAsync(new SearchItemsPageV1Query(name, description, pageNumber));
 
-            return Ok(new PageResponse<IEnumerable<Item>>(pageNumber > totalPages ? totalPages : pageNumber, totalPages, result));
+            return Ok(new PageResponse<IEnumerable<Item>>(pageNumber > response.TotalPages ? response.TotalPages : pageNumber, response.TotalPages, response.Result));
         }
 
-        [HttpGet("~/api/v2/item/search")]
-        public async Task<IActionResult> SearchAsync(string searchValue, int pageNumber = 1)
+        [ApiVersion("2")]
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchV2Async(string searchValue, int pageNumber = 1)
         {
             if (string.IsNullOrEmpty(searchValue))
             {
@@ -56,9 +58,9 @@ namespace ItemMarketplace.Controllers
                 return Ok(new ErrorResponse(Errors.ITEM_ERROR));
             }
 
-            (IEnumerable<Item> response, int totalPages) = await _itemRepository.SearchAsync(searchValue, pageNumber);
+            PageResponse response = await _itemRepository.SearchAsync(new SearchItemsPageV2Query(searchValue, pageNumber));
 
-            return Ok(new PageResponse<IEnumerable<Item>>(pageNumber > totalPages ? totalPages : pageNumber, totalPages, response));
+            return Ok(new PageResponse<IEnumerable<Item>>(pageNumber > response.TotalPages ? response.TotalPages : pageNumber, response.TotalPages, response.Result));
         }
 
 
@@ -96,11 +98,11 @@ namespace ItemMarketplace.Controllers
                 return Ok(new ErrorResponse(Errors.ITEM_ERROR));
             }
 
-            bool isUpdated = await _itemRepository.UpdateItemAsync(new Item(
-                id: request.Id,
-                name: request.Name, 
-                description: request.Description, 
-                metadata: request.Metadata));
+            bool isUpdated = await _itemRepository.UpdateItemAsync(new UpdateItemQuery(
+                Id: request.Id,
+                Name: request.Name, 
+                Description: request.Description, 
+                Metadata: request.Metadata));
 
             return Ok(new ErrorResponse<bool>(isUpdated));
         }

@@ -4,6 +4,7 @@ using Domain.Models;
 using Domain.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Domain.Models.Auctions.GetAuctions;
 
 namespace Infrastructure
 {
@@ -27,54 +28,78 @@ namespace Infrastructure
             return _context.Auction.AsNoTracking().Take(limit);
         }
 
-        public async Task<(IEnumerable<Auction>, int totalPages)> GetAsync(string name, MarketStatus status, SortOrder sortOrder, AuctionSortKey sortKey, int limit, int page)
+        public async Task<PageResponse> SearchByFirstNameAsync(SearchByAllNamesPageQuery searchQuery)
         {
-            Item? item = await _context.Item.AsNoTracking().FirstOrDefaultAsync(x => x.Name == name);
+            Item? item = await _context.Item.AsNoTracking().FirstOrDefaultAsync(x => x.Name == searchQuery.Name);
             if (item == null)
             {
-                return (Enumerable.Empty<Auction>(), 0);
+                return new (0, Enumerable.Empty<Auction>());
             }
 
             IQueryable<Auction> query = _context.Auction;
             query = query.AsNoTracking()
-                .Where(x => x.ItemId == item.Id && x.Status == status);
+                .Where(x => x.ItemId == item.Id && x.Status == searchQuery.Status);
 
-            int countElements = await ApplySorting(query, sortOrder, sortKey).CountAsync();
-            int totalPages = PageHelper.CalculateTotalPagesCount(countElements, limit);
+            int countElements = await query.CountAsync();
+            int totalPages = PageHelper.CalculateTotalPagesCount(countElements, searchQuery.Limit);
 
-            query = ApplySorting(query, sortOrder, sortKey)
-                .Skip((page > totalPages ? totalPages - 1 : page - 1) * limit)
-                .Take(limit);
+            query = query.ApplyAuctionOrderSortingQuery(searchQuery.SortOrder, searchQuery.SortKey)
+                .Skip((searchQuery.Page > totalPages ? totalPages - 1 : searchQuery.Page - 1) * searchQuery.Limit)
+                .Take(searchQuery.Limit);
 
-            return (await query.ToListAsync(), totalPages);
+            return new PageResponse(totalPages, await query.ToListAsync());
         }
 
-        private static IQueryable<Auction> ApplySorting(IQueryable<Auction> query, SortOrder sortOrder, AuctionSortKey sortKey) => sortOrder switch
+        public async Task<PageResponse> SearchByAllNamesAsync(SearchByAllNamesPageQuery searchQuery)
         {
-            SortOrder.ASC => sortKey switch
-            {
-                AuctionSortKey.CreatedDt => query.OrderBy(x => x.CreatedDt),
-                AuctionSortKey.FinishedDt => query.OrderBy(x => x.FinishedDt),
-                AuctionSortKey.Price => query.OrderBy(x => x.Price),
-                AuctionSortKey.Status => query.OrderBy(x => x.Status),
-                AuctionSortKey.Seller => query.OrderBy(x => x.Seller),
-                AuctionSortKey.Buyer => query.OrderBy(x => x.Buyer),
-                _ => throw new NotImplementedException()
-            },
-            SortOrder.DESC => sortKey switch
-            {
-                AuctionSortKey.CreatedDt => query.OrderByDescending(x => x.CreatedDt),
-                AuctionSortKey.FinishedDt => query.OrderByDescending(x => x.FinishedDt),
-                AuctionSortKey.Price => query.OrderByDescending(x => x.Price),
-                AuctionSortKey.Status => query.OrderByDescending(x => x.Status),
-                AuctionSortKey.Seller => query.OrderByDescending(x => x.Seller),
-                AuctionSortKey.Buyer => query.OrderByDescending(x => x.Buyer),
-                _ => throw new NotImplementedException()
-            },
-            _ => throw new NotImplementedException(),
-        };
+            IQueryable<Item> result = _context.Item
+                .AsNoTracking()
+                .BuildSearchTextQuery((q, s) => q.Where(x => x.Name.Contains(s)), searchQuery.Name);
 
+            IQueryable<Auction> query = result.Join(_context.Auction,
+                item => item.Id,
+                auction => auction.ItemId,
+                (item, auction) => auction).Where(x => x.Status == searchQuery.Status);
 
+            int countElements = await query.CountAsync();
+            int totalPages = PageHelper.CalculateTotalPagesCount(countElements, searchQuery.Limit);
+
+            query = query.ApplyAuctionOrderSortingQuery(searchQuery.SortOrder, searchQuery.SortKey)
+                .Skip((searchQuery.Page > totalPages ? totalPages - 1 : searchQuery.Page - 1) * searchQuery.Limit)
+                .Take(searchQuery.Limit);
+
+            return new PageResponse(totalPages, await query.ToListAsync());
+        }
+
+        public async Task<CursorResponse> SearchByAllNamesAsync(SearchByAllNamesCursorQuery searchQuery)
+        {
+            IQueryable<Item> result = _context.Item
+                .AsNoTracking()
+                .BuildSearchTextQuery((q, s) => q.Where(x => x.Name.Contains(s)), searchQuery.Name);
+
+            var query = result.Join(_context.Auction,
+                item => item.Id,
+                auction => auction.ItemId,
+                (item, auction) => auction)
+                .Where(x => x.Status == searchQuery.Status)
+                .ApplyAuctionOrderSortingQuery(searchQuery.SortOrder, searchQuery.SortKey);
+
+            query = searchQuery.SortOrder switch
+            {
+                SortOrder.ASC => query.Where(x => x.Id >= searchQuery.Cursor),
+                SortOrder.DESC => query.Where(x => x.Id <= searchQuery.Cursor),
+                _ => throw new NotImplementedException(),
+            };
+            IReadOnlyList<Auction> auctions = await query.Take(searchQuery.Limit + 1).ToListAsync();
+            if (auctions.Count < 1)
+            {
+                return new CursorResponse(0, Enumerable.Empty<Auction>());
+            }
+            int lastId = auctions[auctions.Count - 1].Id;
+
+            IEnumerable<Auction> auctionsResponse = auctions.Take(searchQuery.Limit);
+            return new CursorResponse(lastId, auctions);
+        }
 
 
         protected virtual void Dispose(bool disposing)

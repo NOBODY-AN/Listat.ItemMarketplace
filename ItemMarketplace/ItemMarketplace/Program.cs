@@ -1,6 +1,9 @@
 using Domain.Interfaces;
 using Infrastructure;
 using ItemMarketplace.Filters;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Versioning;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
 
@@ -31,11 +34,18 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-builder.Services.AddScoped<MarketplaceContext>();
+builder.Services.AddDbContext<MarketplaceContext>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 builder.Services.AddScoped<IAuctionRepository, AuctionRepository>();
 
 
+builder.Services.AddApiVersioning(o =>
+{
+    o.DefaultApiVersion = new ApiVersion(1, 0);
+    o.ApiVersionReader = ApiVersionReader.Combine(
+        new QueryStringApiVersionReader("v"),
+        new HeaderApiVersionReader("api-version"));
+});
 builder.Services.AddMvcCore(options =>
 {
     options.Filters.Add<ExceptionFilter>();

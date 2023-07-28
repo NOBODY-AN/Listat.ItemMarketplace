@@ -1,13 +1,14 @@
 ﻿using Domain.Entities;
+using Domain.Models.Items.GetItems;
 
 namespace Domain.Interfaces
 {
     public interface IItemRepository : IDisposable
     {
         Task<Item?> GetAsync(int id);
-        Task<(IEnumerable<Item> result, int totalPages)> SearchAsync(string? name, string? description, int pageNumber);
-        Task<(IEnumerable<Item> result, int totalPages)> SearchAsync(string searchValue, int pageNumber);
+        Task<PageResponse> SearchAsync(SearchItemsPageV1Query searchQuery);
+        Task<PageResponse> SearchAsync(SearchItemsPageV2Query searchQuery);
         Task<int?> CreateItemAsync(Item item);
-        Task<bool> UpdateItemAsync(Item item);
+        Task<bool> UpdateItemAsync(UpdateItemQuery query);
     }
 }

@@ -1,10 +1,10 @@
 ﻿using Domain.Entities;
 using Domain.Helpers;
 using Domain.Interfaces;
+using Domain.Models.Items.GetItems;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Caching.Memory;
-using System.Collections.Generic;
 
 namespace Infrastructure
 {
@@ -32,48 +32,48 @@ namespace Infrastructure
             return entity.IsKeySet ? entity.Entity.Id : null;
         }
 
-        public async Task<bool> UpdateItemAsync(Item item)
+        public async Task<bool> UpdateItemAsync(UpdateItemQuery query)
         {
-            _context.Item.Attach(item);
+            EntityEntry<Item> item = _context.Item.Attach(new Item(query.Id));
 
-            if (!string.IsNullOrEmpty(item.Name))
-                _context.Entry(item).Property(p => p.Name).IsModified = true;
-            if (!string.IsNullOrEmpty(item.Description))
-                _context.Entry(item).Property(p => p.Description).IsModified = true;
-            if (!string.IsNullOrEmpty(item.Metadata))
-                _context.Entry(item).Property(p => p.Metadata).IsModified = true;
+            if (!string.IsNullOrEmpty(query.Name))
+                item.Entity.Name = query.Name;
+            if (!string.IsNullOrEmpty(query.Description))
+                item.Entity.Description = query.Description;
+            if (!string.IsNullOrEmpty(query.Metadata))
+                item.Entity.Metadata = query.Metadata;
 
             int numberWritenEntities = await _context.SaveChangesAsync();
             if (numberWritenEntities > 0)
             {
-                _cache.Remove(CacheHelper.IdBuilder<Item>(item.Id));
+                _cache.Remove(CacheHelper.IdBuilder<Item>(query.Id));
             }
 
             return numberWritenEntities > 0;
         }
 
-        public async Task<(IEnumerable<Item> result, int totalPages)> SearchAsync(string? name, string? description, int pageNumber)
+        public async Task<PageResponse> SearchAsync(SearchItemsPageV1Query searchQuery)
         {
             IQueryable<Item> query = _context.Item;
             query = query.AsNoTracking();
-            if (!string.IsNullOrEmpty(name))
+            if (!string.IsNullOrEmpty(searchQuery.Name))
             {
-                query = BuildSearchQuery(query, (q, s) => q.Where(x => x.Name.Contains(s)), name);
+                query = BuildSearchQuery(query, (q, s) => q.Where(x => x.Name.Contains(s)), searchQuery.Name);
             }
-            if (!string.IsNullOrEmpty(description))
+            if (!string.IsNullOrEmpty(searchQuery.Description))
             {
-                query = BuildSearchQuery(query, (q, s) => q.Where(x => x.Description.Contains(s)), description);
+                query = BuildSearchQuery(query, (q, s) => q.Where(x => x.Description.Contains(s)), searchQuery.Description);
             }
 
             int totalPages = PageHelper.CalculateTotalPagesCount(await query.CountAsync(), maxItemsPerPage);
 
-            query = query.Skip((pageNumber > totalPages ? totalPages - 1 : pageNumber - 1) * maxItemsPerPage)
+            query = query.Skip((searchQuery.PageNumber > totalPages ? totalPages - 1 : searchQuery.PageNumber - 1) * maxItemsPerPage)
                 .Take(maxItemsPerPage);
 
-            return (await query.ToListAsync(), totalPages);
+            return new(await query.ToListAsync(), totalPages);
         }
 
-        public async Task<(IEnumerable<Item> result, int totalPages)> SearchAsync(string searchValue, int pageNumber)
+        public async Task<PageResponse> SearchAsync(SearchItemsPageV2Query searchQuery)
         {
             IQueryable<Item> query = _context.Item;
             query = query.AsNoTracking();
@@ -82,12 +82,12 @@ namespace Infrastructure
                 (q, s) => q.Where(
                     x => x.Name.Contains(s)
                         || x.Description.Contains(s)
-                        || x.Metadata.Contains(s)), searchValue);
+                        || x.Metadata.Contains(s)), searchQuery.SearchValue);
 
             int countElements = await Expression(query).CountAsync();
             if (countElements < 1)
             {
-                return (Enumerable.Empty<Item>(), 0);
+                return new(Enumerable.Empty<Item>(), 0);
             }
 
             int totalPages = PageHelper.CalculateTotalPagesCount(countElements, maxItemsPerPage);
@@ -95,10 +95,10 @@ namespace Infrastructure
 
             query = Expression(query)
                 .OrderBy(x => x.Id)
-                .Skip((pageNumber > totalPages ? totalPages - 1 : pageNumber - 1) * maxItemsPerPage)
+                .Skip((searchQuery.PageNumber > totalPages ? totalPages - 1 : searchQuery.PageNumber - 1) * maxItemsPerPage)
                 .Take(maxItemsPerPage);
 
-            return (await query.ToListAsync(), totalPages);
+            return new(await query.ToListAsync(), totalPages);
         }
 
         private static IQueryable<TItem> BuildSearchQuery<TItem>(IQueryable<TItem> query, Func<IQueryable<TItem>, string, IQueryable<TItem>> expression, string searchString)
