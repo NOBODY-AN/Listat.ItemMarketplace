@@ -13,15 +13,13 @@ namespace Infrastructure
         private bool disposed = false;
         protected int maxItemsPerPage = 10;
         private readonly MarketplaceContext _context;
-        private readonly IMemoryCache _cache;
 
-        public ItemRepository(MarketplaceContext context, IMemoryCache cache)
+        public ItemRepository(MarketplaceContext context)
         {
             _context = context;
-            _cache = cache;
         }
 
-        public Task<Item?> GetAsync(int id) => _cache.GetOrCreateAsync(CacheHelper.IdBuilder<Item>(id), (e) => _context.Item.FirstOrDefaultAsync(x => x.Id == id));
+        public Task<Item?> GetAsync(int id) => _context.Item.FirstOrDefaultAsync(x => x.Id == id);
 
         public async Task<int?> CreateItemAsync(Item item)
         {
@@ -44,10 +42,6 @@ namespace Infrastructure
                 item.Entity.Metadata = query.Metadata;
 
             int numberWritenEntities = await _context.SaveChangesAsync();
-            if (numberWritenEntities > 0)
-            {
-                _cache.Remove(CacheHelper.IdBuilder<Item>(query.Id));
-            }
 
             return numberWritenEntities > 0;
         }

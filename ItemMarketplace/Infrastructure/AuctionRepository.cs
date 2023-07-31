@@ -12,16 +12,14 @@ namespace Infrastructure
     {
         private bool disposed = false;
         private readonly MarketplaceContext _context;
-        private readonly IMemoryCache _cache;
 
-        public AuctionRepository(MarketplaceContext context, IMemoryCache cache)
+        public AuctionRepository(MarketplaceContext context)
         {
             _context = context;
-            _cache = cache;
         }
 
 
-        public Task<Auction?> GetAsync(int id) => _cache.GetOrCreateAsync(CacheHelper.IdBuilder<Auction>(id), (e) => _context.Auction.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id));
+        public Task<Auction?> GetAsync(int id) => _context.Auction.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
         public IEnumerable<Auction> Get(int limit = 100)
         {

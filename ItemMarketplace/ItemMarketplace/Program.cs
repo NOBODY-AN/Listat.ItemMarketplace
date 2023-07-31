@@ -1,5 +1,6 @@
 using Domain.Interfaces;
 using Infrastructure;
+using Infrastructure.Cache;
 using ItemMarketplace.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
@@ -35,8 +36,10 @@ builder.Services.AddSwaggerGen();
 
 
 builder.Services.AddDbContext<MarketplaceContext>();
-builder.Services.AddScoped<IItemRepository, ItemRepository>();
-builder.Services.AddScoped<IAuctionRepository, AuctionRepository>();
+builder.Services.AddScoped<ItemRepository>();
+builder.Services.AddScoped<IItemRepository, ItemCachedRepository>();
+builder.Services.AddScoped<AuctionRepository>();
+builder.Services.AddScoped<IAuctionRepository, AuctionCachedRepository>();
 
 
 builder.Services.AddApiVersioning(o =>
