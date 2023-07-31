@@ -1,7 +1,7 @@
 ﻿using Domain.Entities;
 using Domain.Interfaces;
-using Domain.Models;
 using Domain.Models.Controllers;
+using Domain.Models.Controllers.Response;
 using Domain.Models.Items.GetItems;
 using Microsoft.AspNetCore.Mvc;
 

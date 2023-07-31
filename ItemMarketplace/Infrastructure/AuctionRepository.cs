@@ -1,10 +1,10 @@
 ﻿using Domain.Entities;
 using Domain.Interfaces;
-using Domain.Models;
 using Domain.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Domain.Models.Auctions.GetAuctions;
+using Domain.Models.Controllers.Query;
 
 namespace Infrastructure
 {

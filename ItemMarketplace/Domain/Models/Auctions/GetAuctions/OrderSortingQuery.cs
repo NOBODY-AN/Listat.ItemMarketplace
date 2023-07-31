@@ -1,4 +1,5 @@
 ﻿using Domain.Entities;
+using Domain.Models.Controllers.Query;
 
 namespace Domain.Models.Auctions.GetAuctions
 {

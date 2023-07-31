@@ -1,4 +1,4 @@
-﻿using Domain.Models;
+﻿using Domain.Models.Controllers.Query;
 using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations.Schema;
 

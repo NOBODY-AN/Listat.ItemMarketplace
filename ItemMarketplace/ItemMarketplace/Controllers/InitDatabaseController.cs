@@ -1,5 +1,5 @@
 ﻿using Domain.Entities;
-using Domain.Models;
+using Domain.Models.Controllers.Query;
 using Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;

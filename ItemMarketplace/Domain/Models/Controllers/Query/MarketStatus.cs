@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Converters;
 using System.Runtime.Serialization;
 
-namespace Domain.Models
+namespace Domain.Models.Controllers.Query
 {
     [JsonConverter(typeof(StringEnumConverter))]
     public enum MarketStatus

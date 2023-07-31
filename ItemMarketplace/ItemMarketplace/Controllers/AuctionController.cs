@@ -1,7 +1,9 @@
 ﻿using Domain.Entities;
 using Domain.Interfaces;
-using Domain.Models;
 using Domain.Models.Auctions.GetAuctions;
+using Domain.Models.Controllers;
+using Domain.Models.Controllers.Query;
+using Domain.Models.Controllers.Response;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ItemMarketplace.Controllers
