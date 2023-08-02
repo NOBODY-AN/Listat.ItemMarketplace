@@ -1,10 +1,10 @@
 ﻿using Domain.Entities;
+using Domain.Extentions;
 using Domain.Helpers;
 using Domain.Interfaces;
 using Domain.Models.Items.GetItems;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Infrastructure
 {
@@ -52,17 +52,16 @@ namespace Infrastructure
             query = query.AsNoTracking();
             if (!string.IsNullOrEmpty(searchQuery.Name))
             {
-                query = BuildSearchQuery(query, (q, s) => q.Where(x => x.Name.Contains(s)), searchQuery.Name);
+                query = query.BuildSearchTextQuery((q, s) => q.Where(x => x.Name.Contains(s)), searchQuery.Name);
             }
             if (!string.IsNullOrEmpty(searchQuery.Description))
             {
-                query = BuildSearchQuery(query, (q, s) => q.Where(x => x.Description.Contains(s)), searchQuery.Description);
+                query = query.BuildSearchTextQuery((q, s) => q.Where(x => x.Description.Contains(s)), searchQuery.Description);
             }
 
             int totalPages = PageHelper.CalculateTotalPagesCount(await query.CountAsync(), maxItemsPerPage);
 
-            query = query.Skip((searchQuery.PageNumber > totalPages ? totalPages - 1 : searchQuery.PageNumber - 1) * maxItemsPerPage)
-                .Take(maxItemsPerPage);
+            query = query.BuildPage(searchQuery.PageNumber, totalPages, maxItemsPerPage);
 
             return new(await query.ToListAsync(), totalPages);
         }
@@ -72,8 +71,7 @@ namespace Infrastructure
             IQueryable<Item> query = _context.Item;
             query = query.AsNoTracking();
 
-            IQueryable<Item> Expression(IQueryable<Item> query) => BuildSearchQuery(query,
-                (q, s) => q.Where(
+            IQueryable<Item> Expression(IQueryable<Item> query) => query.BuildSearchTextQuery((q, s) => q.Where(
                     x => x.Name.Contains(s)
                         || x.Description.Contains(s)
                         || x.Metadata.Contains(s)), searchQuery.SearchValue);
@@ -89,21 +87,9 @@ namespace Infrastructure
 
             query = Expression(query)
                 .OrderBy(x => x.Id)
-                .Skip((searchQuery.PageNumber > totalPages ? totalPages - 1 : searchQuery.PageNumber - 1) * maxItemsPerPage)
-                .Take(maxItemsPerPage);
+                .BuildPage(searchQuery.PageNumber, totalPages, maxItemsPerPage);
 
             return new(await query.ToListAsync(), totalPages);
-        }
-
-        private static IQueryable<TItem> BuildSearchQuery<TItem>(IQueryable<TItem> query, Func<IQueryable<TItem>, string, IQueryable<TItem>> expression, string searchString)
-        {
-            string[] searchTerms = searchString.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries); 
-            foreach (string item in searchTerms)
-            {
-                query = expression(query, item);
-            }
-
-            return query;
         }
 
 

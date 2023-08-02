@@ -1,9 +1,8 @@
 ﻿using Domain.Entities;
 using Domain.Interfaces;
-using Domain.Helpers;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Domain.Models.Auctions.GetAuctions;
+using Domain.Extentions;
 using Domain.Models.Controllers.Query;
 
 namespace Infrastructure
@@ -26,7 +25,7 @@ namespace Infrastructure
             return _context.Auction.AsNoTracking().Take(limit);
         }
 
-        public async Task<PageResponse> SearchByFirstNameAsync(SearchByAllNamesPageQuery searchQuery)
+        public async Task<PageResult> SearchByFirstNameAsync(SearchByAllNamesPageQuery searchQuery)
         {
             Item? item = await _context.Item.AsNoTracking().FirstOrDefaultAsync(x => x.Name == searchQuery.Name);
             if (item == null)
@@ -35,41 +34,33 @@ namespace Infrastructure
             }
 
             IQueryable<Auction> query = _context.Auction;
-            query = query.AsNoTracking()
-                .Where(x => x.ItemId == item.Id && x.Status == searchQuery.Status);
+            (query, int totalCount) = await query.AsNoTracking()
+                .Where(x => x.ItemId == item.Id && x.Status == searchQuery.Status)
+                .ApplyAuctionOrderSortingQuery(searchQuery.SortOrder, searchQuery.SortKey)
+                .BuildPageAsync(searchQuery.Page, searchQuery.Limit);
 
-            int countElements = await query.CountAsync();
-            int totalPages = PageHelper.CalculateTotalPagesCount(countElements, searchQuery.Limit);
-
-            query = query.ApplyAuctionOrderSortingQuery(searchQuery.SortOrder, searchQuery.SortKey)
-                .Skip((searchQuery.Page > totalPages ? totalPages - 1 : searchQuery.Page - 1) * searchQuery.Limit)
-                .Take(searchQuery.Limit);
-
-            return new PageResponse(totalPages, await query.ToListAsync());
+            return new PageResult(totalCount, await query.ToListAsync());
         }
 
-        public async Task<PageResponse> SearchByAllNamesAsync(SearchByAllNamesPageQuery searchQuery)
+        public async Task<PageResult> SearchByAllNamesAsync(SearchByAllNamesPageQuery searchQuery)
         {
             IQueryable<Item> result = _context.Item
                 .AsNoTracking()
                 .BuildSearchTextQuery((q, s) => q.Where(x => x.Name.Contains(s)), searchQuery.Name);
 
-            IQueryable<Auction> query = result.Join(_context.Auction,
+            IQueryable<Auction> query = _context.Auction.AsNoTracking();
+            (query, int totalCount) = await result.Join(query,
                 item => item.Id,
                 auction => auction.ItemId,
-                (item, auction) => auction).Where(x => x.Status == searchQuery.Status);
+                (item, auction) => auction)
+                .Where(x => x.Status == searchQuery.Status)
+                .ApplyAuctionOrderSortingQuery(searchQuery.SortOrder, searchQuery.SortKey)
+                .BuildPageAsync(searchQuery.Page, searchQuery.Limit);
 
-            int countElements = await query.CountAsync();
-            int totalPages = PageHelper.CalculateTotalPagesCount(countElements, searchQuery.Limit);
-
-            query = query.ApplyAuctionOrderSortingQuery(searchQuery.SortOrder, searchQuery.SortKey)
-                .Skip((searchQuery.Page > totalPages ? totalPages - 1 : searchQuery.Page - 1) * searchQuery.Limit)
-                .Take(searchQuery.Limit);
-
-            return new PageResponse(totalPages, await query.ToListAsync());
+            return new PageResult(totalCount, await query.ToListAsync());
         }
 
-        public async Task<CursorResponse> SearchByAllNamesAsync(SearchByAllNamesCursorQuery searchQuery)
+        public async Task<CursorResult> SearchByAllNamesAsync(SearchByAllNamesCursorQuery searchQuery)
         {
             IQueryable<Item> result = _context.Item
                 .AsNoTracking()
@@ -84,19 +75,67 @@ namespace Infrastructure
 
             query = searchQuery.SortOrder switch
             {
-                SortOrder.ASC => query.Where(x => x.Id >= searchQuery.Cursor),
-                SortOrder.DESC => query.Where(x => x.Id <= searchQuery.Cursor),
+                Domain.Models.Controllers.Query.SortOrder.ASC => query.Where(x => x.Id >= searchQuery.Cursor),
+                Domain.Models.Controllers.Query.SortOrder.DESC => query.Where(x => x.Id <= searchQuery.Cursor),
                 _ => throw new NotImplementedException(),
             };
             IReadOnlyList<Auction> auctions = await query.Take(searchQuery.Limit + 1).ToListAsync();
             if (auctions.Count < 1)
             {
-                return new CursorResponse(0, Enumerable.Empty<Auction>());
+                return new CursorResult(0, Enumerable.Empty<Auction>());
             }
             int lastId = auctions[auctions.Count - 1].Id;
 
             IEnumerable<Auction> auctionsResponse = auctions.Take(searchQuery.Limit);
-            return new CursorResponse(lastId, auctions);
+            return new CursorResult(lastId, auctions);
+        }
+
+        public async Task<PageResult<AdvancedSearchResponse>> AdvancedSearchAsync(AdvancedSearchPageQuery searchQuery)
+        {
+            IQueryable<Item> itemQuery = _context.Item
+                .AsNoTracking();
+            if (!string.IsNullOrEmpty(searchQuery.Name))
+            {
+                itemQuery = itemQuery.BuildSearchTextQuery((q, s) => q.Where(x => x.Name.Contains(s)), searchQuery.Name);
+            }
+
+            IQueryable<Auction> auctionQuery = _context.Auction.AsNoTracking();
+            if (searchQuery.Status.HasValue)
+            {
+                auctionQuery = auctionQuery.Where(x => x.Status == searchQuery.Status);
+            }
+            if (!string.IsNullOrEmpty(searchQuery.SellerName))
+            {
+                auctionQuery = auctionQuery.Where(x => x.Seller == searchQuery.SellerName);
+            }
+
+            var itemActionJoin = itemQuery.Join(auctionQuery,
+                item => item.Id,
+                auction => auction.ItemId,
+                (item, auction) => new
+                {
+                    item.Name,
+                    auction.Id,
+                    auction.ItemId,
+                    auction.CreatedDt,
+                    auction.FinishedDt,
+                    auction.Price,
+                    auction.Status,
+                    auction.Seller,
+                    auction.Buyer
+                });
+
+            itemActionJoin = searchQuery.SortKey switch
+            {
+                AuctionSortKey.CreatedDt => itemActionJoin.ApplyOrderSortingQuery(searchQuery.SortOrder, x => x.CreatedDt),
+                AuctionSortKey.Price => itemActionJoin.ApplyOrderSortingQuery(searchQuery.SortOrder, x => x.Price),
+                _ => throw new NotImplementedException()
+            };
+            (itemActionJoin, int totalCount) = await itemActionJoin.BuildPageAsync(searchQuery.Page, searchQuery.Limit);
+
+
+            return new PageResult<AdvancedSearchResponse>(totalCount, await itemActionJoin
+                .Select(x => new AdvancedSearchResponse(x.Name, x.Id, x.ItemId, x.CreatedDt, x.FinishedDt, x.Price, x.Status, x.Seller, x.Buyer)).ToListAsync());
         }
 
 

@@ -2,12 +2,12 @@
 
 namespace Domain.Models.Auctions.GetAuctions
 {
-    public class CursorResponse
+    public class CursorResult
     {
         public int NextCursor { get; set; }
         public IEnumerable<Auction> Result { get; set; }
 
-        public CursorResponse(int nextCursor, IEnumerable<Auction> result)
+        public CursorResult(int nextCursor, IEnumerable<Auction> result)
         {
             NextCursor = nextCursor;
             Result = result;

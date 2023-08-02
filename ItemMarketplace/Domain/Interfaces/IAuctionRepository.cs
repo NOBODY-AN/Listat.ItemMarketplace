@@ -1,5 +1,4 @@
 ﻿using Domain.Entities;
-using Domain.Models;
 using Domain.Models.Auctions.GetAuctions;
 
 namespace Domain.Interfaces
@@ -8,8 +7,9 @@ namespace Domain.Interfaces
     {
         Task<Auction?> GetAsync(int id);
         IEnumerable<Auction> Get(int limit = 100);
-        Task<PageResponse> SearchByFirstNameAsync(SearchByAllNamesPageQuery searchQuery);
-        Task<PageResponse> SearchByAllNamesAsync(SearchByAllNamesPageQuery searchQuery);
-        Task<CursorResponse> SearchByAllNamesAsync(SearchByAllNamesCursorQuery searchQuery);
+        Task<PageResult> SearchByFirstNameAsync(SearchByAllNamesPageQuery searchQuery);
+        Task<PageResult> SearchByAllNamesAsync(SearchByAllNamesPageQuery searchQuery);
+        Task<CursorResult> SearchByAllNamesAsync(SearchByAllNamesCursorQuery searchQuery);
+        Task<PageResult<AdvancedSearchResponse>> AdvancedSearchAsync(AdvancedSearchPageQuery searchQuery);
     }
 }

@@ -27,11 +27,13 @@ namespace Infrastructure.Cache
                 return _repository.GetAsync(id);
             });
 
-        public Task<PageResponse> SearchByAllNamesAsync(SearchByAllNamesPageQuery searchQuery) => _repository.SearchByAllNamesAsync(searchQuery);
+        public Task<PageResult> SearchByAllNamesAsync(SearchByAllNamesPageQuery searchQuery) => _repository.SearchByAllNamesAsync(searchQuery);
 
-        public Task<CursorResponse> SearchByAllNamesAsync(SearchByAllNamesCursorQuery searchQuery) => _repository.SearchByAllNamesAsync(searchQuery);
+        public Task<CursorResult> SearchByAllNamesAsync(SearchByAllNamesCursorQuery searchQuery) => _repository.SearchByAllNamesAsync(searchQuery);
 
-        public Task<PageResponse> SearchByFirstNameAsync(SearchByAllNamesPageQuery searchQuery) => _repository.SearchByFirstNameAsync(searchQuery);
+        public Task<PageResult> SearchByFirstNameAsync(SearchByAllNamesPageQuery searchQuery) => _repository.SearchByFirstNameAsync(searchQuery);
+
+        public Task<PageResult<AdvancedSearchResponse>> AdvancedSearchAsync(AdvancedSearchPageQuery searchQuery) => _repository.AdvancedSearchAsync(searchQuery);
 
         public void Dispose() => _repository.Dispose();
     }

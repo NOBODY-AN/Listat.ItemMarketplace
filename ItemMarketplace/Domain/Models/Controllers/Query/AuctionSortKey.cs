@@ -9,15 +9,15 @@ namespace Domain.Models.Controllers.Query
     {
         [EnumMember(Value = "createdDt")]
         CreatedDt,
-        [EnumMember(Value = "finishedDt")]
-        FinishedDt,
+        //[EnumMember(Value = "finishedDt")]
+        //FinishedDt,
         [EnumMember(Value = "price")]
         Price,
-        [EnumMember(Value = "status")]
-        Status,
-        [EnumMember(Value = "seller")]
-        Seller,
-        [EnumMember(Value = "buyer")]
-        Buyer
+        //[EnumMember(Value = "status")]
+        //Status,
+        //[EnumMember(Value = "seller")]
+        //Seller,
+        //[EnumMember(Value = "buyer")]
+        //Buyer
     }
 }
